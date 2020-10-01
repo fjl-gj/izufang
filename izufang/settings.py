@@ -136,11 +136,11 @@ WSGI_APPLICATION = 'izufang.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'zufang',
-        'HOST': '1.2.3.4',
+        'NAME': 'izufang',
+        'HOST': '8.129.162.35',
         'PORT': 3306,
-        'USER': 'mysql_user',
-        'PASSWORD': 'mysql_pass',
+        'USER': 'fjl',
+        'PASSWORD': 'fjl1024.618',
         'CHARSET': 'utf8',
         'TIME_ZONE': 'Asia/Shanghai',
     },
@@ -150,22 +150,22 @@ DATABASES = {
 # DATABASE_ROUTERS = []
 
 # 缓存配置
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': [
-            'redis://1.2.3.4:6379/0',
-        ],
-        'KEY_PREFIX': 'izufang',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': 512,
-            },
-            'PASSWORD': 'redis_pass'
-        }
-    },
-}
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': [
+#             'redis://1.2.3.4:6379/0',
+#         ],
+#         'KEY_PREFIX': 'izufang',
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#             'CONNECTION_POOL_KWARGS': {
+#                 'max_connections': 512,
+#             },
+#             'PASSWORD': 'redis_pass'
+#         }
+#     },
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

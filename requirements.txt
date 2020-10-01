@@ -15,5 +15,5 @@ mysqlclient
 pillow
 ujson
 django-celery-results
-alipay-sdk-python
 dynaconf
+alipay-sdk-python
