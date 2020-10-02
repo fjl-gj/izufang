@@ -74,27 +74,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'izufang.wsgi.application'
 
-# # djangorestframework的配置
-# REST_FRAMEWORK = {
-#     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
-#     # 配置默认页面大小
-#     'PAGE_SIZE': 5,
-#     # 配置默认的分页类
-#     'DEFAULT_PAGINATION_CLASS': 'api.helpers.CustomPagePagination',
-#     # 配置默认的过滤和排序类
-#     'DEFAULT_FILTER_BACKENDS': (
-#         'django_filters.rest_framework.DjangoFilterBackend',
-#         'rest_framework.filters.OrderingFilter',
-#     ),
-#     'DEFAULT_THROTTLE_CLASSES': (
-#         'rest_framework.throttling.AnonRateThrottle',
-#         'rest_framework.throttling.UserRateThrottle',
-#     ),
-#     'DEFAULT_THROTTLE_RATES': {
-#         'anon': '30/min',
-#         'user': '10000/day',
-#     }
-# }
+# djangorestframework的配置
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    # 配置默认页面大小
+    'PAGE_SIZE': 5,
+    # 配置默认的分页类
+    'DEFAULT_PAGINATION_CLASS': 'api.helpers.CustomPagePagination',
+    # # 配置默认的过滤和排序类
+    # 'DEFAULT_FILTER_BACKENDS': (
+    #     'django_filters.rest_framework.DjangoFilterBackend',
+    #     'rest_framework.filters.OrderingFilter',
+    # ),
+    # 'DEFAULT_THROTTLE_CLASSES': (
+    #     'rest_framework.throttling.AnonRateThrottle',
+    #     'rest_framework.throttling.UserRateThrottle',
+    # ),
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'anon': '30/min',
+    #     'user': '10000/day',
+    # }
+}
 
 # 调试工具栏
 DEBUG_TOOLBAR_CONFIG = {
@@ -153,22 +153,22 @@ DATABASES = {
 # DATABASE_ROUTERS = []
 
 # 缓存配置
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': [
-#             'redis://1.2.3.4:6379/0',
-#         ],
-#         'KEY_PREFIX': 'izufang',
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#             'CONNECTION_POOL_KWARGS': {
-#                 'max_connections': 512,
-#             },
-#             'PASSWORD': 'redis_pass'
-#         }
-#     },
-# }
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': [
+            'redis://8.129.162.35:54321/0',
+        ],
+        'KEY_PREFIX': 'izufang',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 512,
+            },
+            'PASSWORD': 'Fjl1024.618'
+        }
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
