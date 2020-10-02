@@ -38,10 +38,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'debug_toolbar',
+    'rest_framework',
+    'common',
+    'api',
 ]
 
 MIDDLEWARE = [
-    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,15 +96,15 @@ WSGI_APPLICATION = 'izufang.wsgi.application'
 #     }
 # }
 
-# # 调试工具栏
-# DEBUG_TOOLBAR_CONFIG = {
-#     # 引入jquery库
-#     'JQUERY_URL': 'https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js',
-#     # 工具栏是否折叠
-#     'SHOW_COLLAPSED': True,
-#     # 是否显示工具栏
-#     'SHOW_TOOLBAR_CALLBACK': lambda x: True,
-# }
+# 调试工具栏
+DEBUG_TOOLBAR_CONFIG = {
+    # 引入jquery库
+    'JQUERY_URL': 'https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js',
+    # 工具栏是否折叠
+    'SHOW_COLLAPSED': True,
+    # 是否显示工具栏
+    'SHOW_TOOLBAR_CALLBACK': lambda x: True,
+}
 
 # # 配置允许跨域访问接口数据
 # CORS_ORIGIN_ALLOW_ALL = True

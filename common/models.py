@@ -5,20 +5,55 @@
 #   * Make sure each ForeignKey has `on_delete` set to the desired behavior.
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
+
 from django.db import models
 
 
+class User(models.Model):
+    """用户"""
+    # 用户ID
+    userid = models.AutoField(primary_key=True)
+    # 用户名
+    username = models.CharField(unique=True, max_length=20)
+    # 用户密码（数据库中保存MD5摘要，登录时比较密码的签名）
+    password = models.CharField(max_length=32)
+    # 用户真实姓名
+    realname = models.CharField(max_length=20)
+    # 用户性别
+    sex = models.BooleanField(default=True)
+    # 用户电话
+    tel = models.CharField(unique=True, max_length=20)
+    # 用户邮箱
+    email = models.CharField(unique=True, max_length=255, default='')
+    # 用户注册日期
+    regdate = models.DateTimeField(auto_now_add=True)
+    # 用户积分（每天登录可以获得积分）
+    point = models.IntegerField(default=0)
+    # 用户最后登录日期时间
+    lastvisit = models.DateTimeField(blank=True, null=True)
+    # 用户是否活跃
+    is_active = models.BooleanField(default=True)
+    # 用户角色
+    roles = models.ManyToManyField(to='Role', through='UserRole')
+    # role = models.OneToOneField(to='Role', on_delete=models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = 'tb_user'
+
+
 class District(models.Model):
-    '''省市区地区'''
+    """地区"""
     # 地区ID
     distid = models.IntegerField(primary_key=True)
-    # 自参照 对象模型 ForeignKey,db_column对应数据库表字段  父级行政区域（省级行政区域的父级为None）
-    parent = models.ForeignKey(to='self', on_delete=models.DO_NOTHING, db_column='pid', blank=True, null=True)
+    # 父级行政区域（省级行政区域的父级为None）
+    parent = models.ForeignKey(to='self', on_delete=models.DO_NOTHING, db_column='pid', null=True)
     # 地区名称
     name = models.CharField(max_length=255)
-    # 修改为布尔对象 默认 False 不热门
+    # 该地区是不是热门城市
     ishot = models.BooleanField(default=False)
-    intro = models.CharField(max_length=255, blank=True, null=True)
+    # 地区介绍
+    intro = models.CharField(max_length=255, default='')
 
     class Meta:
         managed = False
@@ -26,10 +61,12 @@ class District(models.Model):
 
 
 class Agent(models.Model):
-    '''经理人'''
+    """经理人"""
     # 经理人ID
     agentid = models.AutoField(primary_key=True)
+    # 经理人姓名
     name = models.CharField(max_length=255)
+    # 经理人电话
     tel = models.CharField(max_length=20)
     # 经理人服务星级
     servstar = models.IntegerField()
@@ -38,26 +75,27 @@ class Agent(models.Model):
     # 经理人业务水平
     profstar = models.IntegerField()
     # 经理人是否持有专业认证
-    certificated = models.IntegerField()
+    certificated = models.BooleanField(default=False)
     # 经理人负责的楼盘
-    # 多对多关联，经理人对应楼盘 数据库中没有对应的表，增加中间表AgentEstat 关联多对多 ManyToMany 对象模型
-    estates = models.ManyToManyField(to='Estate', through='AgentEstat')
+    estates = models.ManyToManyField(to='Estate', through='AgentEstate')
 
     class Meta:
         managed = False
         db_table = 'tb_agent'
 
+
 class Estate(models.Model):
-    '''楼盘'''
+    """楼盘"""
+    # 楼盘ID
     estateid = models.AutoField(primary_key=True)
-    # 关联行政区域 转对象模型
+    # 所属行政区域
     district = models.ForeignKey(to=District, on_delete=models.DO_NOTHING, db_column='distid')
+    # 楼盘名称
     name = models.CharField(max_length=255)
     # 楼盘热度
-    hot = models.IntegerField(blank=True, null=True)
-    intro = models.CharField(max_length=511, blank=True, null=True)
-    # 写上多对多关联，经理人对应楼盘 数据库中没有对应的表，增加中间表AgentEstat 关联多对多 ManyToMany 对象模型
-    agents = models.ManyToManyField(to='Agent', through='AgentEstate')
+    hot = models.IntegerField(default=0)
+    # 楼盘介绍
+    intro = models.CharField(max_length=511, default='')
 
     class Meta:
         managed = False
@@ -65,43 +103,24 @@ class Estate(models.Model):
 
 
 class AgentEstate(models.Model):
-    '''经理人与楼盘中间体'''
+    """经理人楼盘中间实体"""
     agent_estate_id = models.AutoField(primary_key=True)
-    agent = models.ForeignKey(to='Agent', on_delete=models.DO_NOTHING, db_column='agentid')
-    estate = models.ForeignKey(to='Estate', on_delete=models.DO_NOTHING, db_column='estateid')
+    # 经理人
+    agent = models.ForeignKey(to=Agent, on_delete=models.DO_NOTHING, db_column='agentid')
+    # 楼盘
+    estate = models.ForeignKey(to=Estate, on_delete=models.DO_NOTHING, db_column='estateid')
 
     class Meta:
         managed = False
         db_table = 'tb_agent_estate'
-        unique_together = (('agent', 'estate'),)
-
-
-class User(models.Model):
-    '''用户'''
-    userid = models.AutoField(primary_key=True)
-    username = models.CharField(unique=True, max_length=20)
-    password = models.CharField(max_length=32)
-    realname = models.CharField(max_length=20)
-    sex = models.IntegerField(blank=True, null=True)
-    tel = models.CharField(unique=True, max_length=20)
-    email = models.CharField(unique=True, max_length=255, blank=True, null=True)
-    # 用户注册日期
-    regdate = models.DateTimeField(blank=True, null=True)
-    # 用户积分
-    point = models.IntegerField(blank=True, null=True)
-    # 用户最后登录日期时间
-    lastvisit = models.DateTimeField(blank=True, null=True)
-    # 多对多关系 与角色关联多对多
-    roles = models.ManyToManyField(to='Role', through='UserRole')
-
-    class Meta:
-        managed = False
-        db_table = 'tb_user'
+        unique_together = (('agent', 'estate'), )
 
 
 class HouseType(models.Model):
-    '''户型'''
+    """户型"""
+    # 户型ID
     typeid = models.IntegerField(primary_key=True)
+    # 户型名称
     name = models.CharField(max_length=255)
 
     class Meta:
@@ -110,48 +129,50 @@ class HouseType(models.Model):
 
 
 class HouseInfo(models.Model):
-    '''房源信息'''
+    """房源信息"""
+    # 房源ID
     houseid = models.AutoField(primary_key=True)
+    # 房源标题
     title = models.CharField(max_length=50)
-    # 面积
+    # 房源面积
     area = models.IntegerField()
-    # 楼层
+    # 房源楼层
     floor = models.IntegerField()
-    # 总楼层
+    # 房源总楼层
     totalfloor = models.IntegerField()
-    # 朝向
+    # 房源朝向
     direction = models.CharField(max_length=10)
-    # 价格
+    # 房源价格
     price = models.IntegerField()
-    # 元/月 单位
+    # 房源价格单位
     priceunit = models.CharField(max_length=10)
-    # 房源环境描述
-    detail = models.CharField(max_length=511, blank=True, null=True)
-    # 照片主图
+    # 房源详情
+    detail = models.CharField(max_length=511, default='')
+    # 房源图片（主图）
     mainphoto = models.CharField(max_length=255)
     # 房源发布日期
-    pubdate = models.DateField()
-    # 街道地址
+    pubdate = models.DateField(auto_now_add=True)
+    # 房源所在街道
     street = models.CharField(max_length=255)
-    # 靠近地铁  布尔值
+    # 是否有地铁
     hassubway = models.BooleanField(default=False)
-    # 是否合租  shared共享 布尔值
+    # 是否支持合租
     isshared = models.BooleanField(default=False)
     # 是否有中介费
     hasagentfees = models.BooleanField(default=False)
-    # 类型id
+    # 房源户型
     type = models.ForeignKey(to=HouseType, on_delete=models.DO_NOTHING, db_column='typeid')
-    # 用户id 转对象模型
+    # 房源发布者
     user = models.ForeignKey(to=User, on_delete=models.DO_NOTHING, db_column='userid')
-    # 二级行政区域
-    dist_level2 = models.ForeignKey(to=District, on_delete=models.DO_NOTHING, db_column='distid2')
-    # 三级行政区域
-    dist_level3 = models.ForeignKey(to=District, on_delete=models.DO_NOTHING, db_column='distid3')
-    # 楼盘
-    estate = models.ForeignKey(to=Estate, on_delete=models.DO_NOTHING, db_column='estateid', blank=True, null=True)
-    # 经理人
-    agent = models.ForeignKey(to=Agent, on_delete=models.DO_NOTHING, db_column='agentid', blank=True, null=True)
-    # 标签
+    # 房源所属二级行政区域
+    district_level2 = models.ForeignKey(to=District, on_delete=models.DO_NOTHING, related_name='+', db_column='distid2')
+    # 房源所属三级行政区域
+    district_level3 = models.ForeignKey(to=District, on_delete=models.DO_NOTHING, related_name='+', db_column='distid3')
+    # 房源所属楼盘
+    estate = models.ForeignKey(to=Estate, on_delete=models.DO_NOTHING, db_column='estateid', null=True)
+    # 负责该房源的经理人
+    agent = models.ForeignKey(to=Agent, on_delete=models.DO_NOTHING, db_column='agentid', null=True)
+    # 房源标签
     tags = models.ManyToManyField(to='Tag', through='HouseTag')
 
     class Meta:
@@ -159,24 +180,15 @@ class HouseInfo(models.Model):
         db_table = 'tb_house_info'
 
 
-class Tag(models.Model):
-    '''标签'''
-    tagid = models.AutoField(primary_key=True)
-    content = models.CharField(max_length=20)
-
-    class Meta:
-        managed = False
-        db_table = 'tb_tag'
-
-
 class HousePhoto(models.Model):
-    '''房源照片'''
+    """房源的图片"""
+    # 图片ID
     photoid = models.AutoField(primary_key=True)
-    # 房子id信息
-    house = models.ForeignKey(to='HouseInfo', on_delete=models.DO_NOTHING, db_column='houseid')
-    # 照片存储路径
+    # 图片对应的房源
+    house = models.ForeignKey(to=HouseInfo, on_delete=models.DO_NOTHING, db_column='houseid', null=True)
+    # 图片资源路径
     path = models.CharField(max_length=255)
-    # 主图
+    # 是否主图
     ismain = models.BooleanField(default=False)
 
     class Meta:
@@ -184,69 +196,74 @@ class HousePhoto(models.Model):
         db_table = 'tb_house_photo'
 
 
+class Tag(models.Model):
+    """标签"""
+    # 标签ID
+    tagid = models.AutoField(primary_key=True)
+    # 标签内容
+    content = models.CharField(max_length=20)
+
+    class Meta:
+        managed = False
+        db_table = 'tb_tag'
+
+
 class HouseTag(models.Model):
-    '''房屋标签'''
+    """房源标签中间实体"""
     house_tag_id = models.AutoField(primary_key=True)
-    house = models.ForeignKey(to='HouseInfo', on_delete=models.DO_NOTHING, db_column='houseid')
-    # 房源信息
-    tag = models.ForeignKey(to='Tag', on_delete=models.DO_NOTHING, db_column='tagid')
+    # 房源
+    house = models.ForeignKey(to=HouseInfo, on_delete=models.DO_NOTHING, db_column='houseid')
+    # 标签
+    tag = models.ForeignKey(to=Tag, on_delete=models.DO_NOTHING, db_column='tagid')
 
     class Meta:
         managed = False
         db_table = 'tb_house_tag'
-        unique_together = (('house', 'tag'),)
+        unique_together = (('house', 'tag'), )
 
 
 class Record(models.Model):
-    '''记录'''
+    """浏览记录"""
+    # 浏览记录ID
     recordid = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(to='User', on_delete=models.DO_NOTHING, db_column='userid')
-    house = models.ForeignKey(to='HouseInfo', on_delete=models.DO_NOTHING, db_column='houseid')
-    # 记录时间
-    recorddate = models.DateTimeField()
+    # 浏览的用户
+    user = models.ForeignKey(to=User, on_delete=models.DO_NOTHING, db_column='userid')
+    # 浏览的房源
+    house = models.ForeignKey(to=HouseInfo, on_delete=models.DO_NOTHING, db_column='houseid')
+    # 浏览日路日期
+    recorddate = models.DateTimeField(auto_now=True)
 
     class Meta:
         managed = False
         db_table = 'tb_record'
-        unique_together = (('userid', 'houseid'),)
+        unique_together = (('user', 'house'), )
 
 
 class LoginLog(models.Model):
-    '''登录信息'''
+    """登录日志"""
+    # 日志ID
     logid = models.BigAutoField(primary_key=True)
-    # 用户id
-    user = models.ForeignKey(to='User', on_delete=models.DO_NOTHING, db_column='userid')
-    # 用户ip
+    # 登录的用户
+    user = models.ForeignKey(to=User, on_delete=models.DO_NOTHING, db_column='userid')
+    # 登录的IP地址
     ipaddr = models.CharField(max_length=255)
-    # 用户登陆时间
-    logdate = models.DateTimeField(blank=True, null=True)
-    # 用户登录设备编码
-    devcode = models.CharField(max_length=255, blank=True, null=True)
+    # 登录的日期
+    logdate = models.DateTimeField(auto_now_add=True)
+    # 登录的设备编码
+    devcode = models.CharField(max_length=255, default='')
 
     class Meta:
         managed = False
         db_table = 'tb_login_log'
 
 
-class Privilege(models.Model):
-    '''权限'''
-    privid = models.AutoField(primary_key=True)
-    # 权限方式
-    method = models.CharField(max_length=15)
-    # 接口数据url路由地址
-    url = models.CharField(max_length=1024)
-    # 角色权限
-    detail = models.CharField(max_length=255, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'tb_privilege'
-
-
 class Role(models.Model):
-    '''角色'''
+    """角色"""
+    # 角色ID
     roleid = models.AutoField(primary_key=True)
+    # 角色名称
     rolename = models.CharField(max_length=255)
+    # 角色对应的权限
     privs = models.ManyToManyField(to='Privilege', through='RolePrivilege')
 
     class Meta:
@@ -254,27 +271,45 @@ class Role(models.Model):
         db_table = 'tb_role'
 
 
-class RolePrivilege(models.Model):
-    '''角色权限中间体'''
-    role_priv_id = models.AutoField(primary_key=True)
-    # 角色
-    role = models.ForeignKey(to=Role, on_delete=models.DO_NOTHING ,db_column='roleid')
-    # 权限
-    privileges = models.ForeignKey(to=Privilege, on_delete=models.DO_NOTHING, db_column='privid')
+class Privilege(models.Model):
+    """权限"""
+    # 权限ID
+    privid = models.AutoField(primary_key=True)
+    # 权限对应的方法
+    method = models.CharField(max_length=15)
+    # 权限对应的URL
+    url = models.CharField(max_length=1024)
+    # 权限的描述
+    detail = models.CharField(max_length=255, default='')
 
     class Meta:
         managed = False
-        db_table = 'tb_role_privilege'
-        unique_together = (('role', 'privileges'),)
+        db_table = 'tb_privilege'
 
 
 class UserRole(models.Model):
-    '''用户角色中间体'''
+    """用户角色中间实体"""
     user_role_id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(to='User', on_delete=models.DO_NOTHING, db_column='userid')
-    role = models.ForeignKey(to='Role', on_delete=models.DO_NOTHING, db_column='roleid')
+    # 用户
+    user = models.ForeignKey(to=User, on_delete=models.DO_NOTHING, db_column='userid')
+    # 角色
+    role = models.ForeignKey(to=Role, on_delete=models.DO_NOTHING, db_column='roleid')
 
     class Meta:
         managed = False
         db_table = 'tb_user_role'
-        unique_together = (('user', 'role'),)
+        unique_together = (('user', 'role'), )
+
+
+class RolePrivilege(models.Model):
+    """角色权限中间实体"""
+    role_priv_id = models.AutoField(primary_key=True)
+    # 角色
+    role = models.ForeignKey(to=Role, on_delete=models.DO_NOTHING, db_column='roleid')
+    # 权限
+    priv = models.ForeignKey(to=Privilege, on_delete=models.DO_NOTHING, db_column='privid')
+
+    class Meta:
+        managed = False
+        db_table = 'tb_role_privilege'
+        unique_together = (('role', 'priv'), )
