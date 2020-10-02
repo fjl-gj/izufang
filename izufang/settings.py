@@ -80,7 +80,7 @@ REST_FRAMEWORK = {
     # 配置默认页面大小
     'PAGE_SIZE': 5,
     # 配置默认的分页类
-    'DEFAULT_PAGINATION_CLASS': 'api.helpers.CustomPagePagination',
+    'DEFAULT_PAGINATION_CLASS': 'api.helpers.CustomPagination',
     # # 配置默认的过滤和排序类
     # 'DEFAULT_FILTER_BACKENDS': (
     #     'django_filters.rest_framework.DjangoFilterBackend',
@@ -163,7 +163,7 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'CONNECTION_POOL_KWARGS': {
-                'max_connections': 512,
+                'max_connections': 1024,
             },
             'PASSWORD': 'Fjl1024.618'
         }

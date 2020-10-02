@@ -7,6 +7,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
+from api.helpers import AgentCursorPagination
 from api.serializers import *
 from common.models import District, Agent
 
@@ -49,12 +50,11 @@ def get_cityside(HttpRequest, dist) :
 # 更新经理人，只能更新部分字段
 class AgentView(RetrieveUpdateAPIView,ListCreateAPIView):
     '''获取经理人视图'''
+    pagination_class = AgentCursorPagination
     queryset = Agent.objects.all()
     def get_queryset(self):
-        queryset = self.queryset.prefetch_related('estates')
-        if 'pk' in self.kwargs:
-            queryset = self.queryset.only('name', 'servstar')
-        return queryset.order_by('agentid')
+        queryset = (self.queryset.prefetch_related('estates')) if 'pk' in self.kwargs else (self.queryset.only('name', 'servstar'))
+        return queryset.order_by('-servstar')
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
