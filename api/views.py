@@ -1,38 +1,35 @@
-import pickle
-
-from django.core.cache import caches
-from django.shortcuts import render
+import ujson
 from django.http import HttpRequest, HttpResponse
-
 # Create your views here.
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from django_redis import get_redis_connection
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.filters import OrderingFilter
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import ModelViewSet
 
-from api.helpers import AgentCursorPagination, EstateFilterSet, HouseInfoFilterSet
+from api.helpers import EstateFilterSet, HouseInfoFilterSet
 from api.serializers import *
 from common.models import District, Agent
 
 
 # FBV
 # 声明式缓存
-@cache_page(timeout=31536000, cache='default',key_prefix='api')
+@cache_page(timeout=31536000, cache='default', key_prefix='api')
 @api_view(('GET',))
 def get_province(request: HttpRequest) -> HttpResponse:
     '''获取省级城市信息'''
     queryset = District.objects.filter(parent__isnull=True).only('name')
-    serializers = DistrictSimpleSerializer(queryset,many=True)
+    serializers = DistrictSimpleSerializer(queryset, many=True)
     return Response({
-        'code':1000,
-        'message':'获取省级成功',
-        'results':serializers.data,
+        'code': 1000,
+        'message': '获取省级成功',
+        'results': serializers.data,
     })
+
 
 # # 编程式缓存1
 # @api_view(('GET',))
@@ -55,7 +52,7 @@ def get_province(request: HttpRequest) -> HttpResponse:
 
 # 编程式缓存2
 @api_view(('GET',))
-def get_cityside(HttpRequest, dist) :
+def get_district(HttpRequest, distid):
     '''
     获取省级对应城市区信息
     :param request: 获取得请求信息
@@ -63,17 +60,27 @@ def get_cityside(HttpRequest, dist) :
     :return: 返回响应数据Response
     '''
     # 直接拿取django中的缓存的原生客户端进行查询
-    cli = get_redis_connection()
+    redis_cli = get_redis_connection()
     # 如果空则查询加缓存
-    queryset = cli.get(f'izufang:dist:{dist}')
-    if queryset:
-        queryset = pickle.loads(queryset)
+    data = redis_cli.get(f'izufang:district:{distid}')
+    if data:
+        data = ujson.loads(data)
     else:
-        queryset = District.objects.filter(distid=dist).defer('parent').first()
-        data = pickle.dumps(queryset)
-        cli.set(f'izufang:dist:{dist}', data, ex=900)
-    serializers = DistrictComplexSerializer(queryset)
-    return Response(serializers.data)
+        district = District.objects.filter(distid=distid).defer('parent').first()
+        data = DistrictDetailSerializer(district).data
+        redis_cli.set(f'izufang:district:{distid}', ujson.dumps(data), ex=900)
+    return Response(data)
+
+
+@method_decorator(decorator=cache_page(timeout=86400), name='get')
+class HotCityView(ListAPIView):
+    """热门城市视图
+    get:
+        获取热门城市
+    """
+    queryset = District.objects.filter(ishot=True).only('name')
+    serializer_class = DistrictSimpleSerializer
+    pagination_class = None
 
 
 # FBV
@@ -85,25 +92,47 @@ def get_cityside(HttpRequest, dist) :
 # 查看多个经理人 看经理人id和姓名以及星级即可
 # 新增经理人，显示全部字段
 # 更新经理人，只能更新部分字段
-class AgentView(RetrieveUpdateAPIView,ListCreateAPIView):
-    '''获取经理人视图'''
-    pagination_class = AgentCursorPagination
+@method_decorator(decorator=cache_page(timeout=120), name='list')
+@method_decorator(decorator=cache_page(timeout=300), name='retrieve')
+class AgentViewSet(ModelViewSet):
+    """经理人视图
+    list:
+        获取经理人列表
+    retrieve:
+        获取经理人详情
+    create:
+        创建经理人
+    update:
+        更新经理人信息
+    partial_update:
+        更新经理人信息
+    delete:
+        删除经理人
+    """
     queryset = Agent.objects.all()
+
     def get_queryset(self):
-        queryset = (self.queryset.prefetch_related('estates')) if 'pk' in self.kwargs \
-            else (self.queryset.only('name', 'servstar'))
-        return queryset.order_by('-servstar')
+        name = self.request.GET.get('name')
+        if name:
+            self.queryset = self.queryset.filter(name__contains=name)
+        servstar = self.request.GET.get('servstar')
+        if servstar:
+            self.queryset = self.queryset.filter(servstar__gte=servstar)
+        if self.action == 'list':
+            self.queryset = self.queryset.only('name', 'tel', 'servstar')
+        else:
+            self.queryset = self.queryset.prefetch_related(
+                Prefetch('estates',
+                         queryset=Estate.objects.all().only('name').order_by('-hot'))
+            )
+        return self.queryset.order_by('-servstar')
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
-            serializer = AgentCreateSerializer
-        else:
-            serializer = AgentRetrieveSerializer if 'pk' in self.kwargs else AgentListSerializer
-        return serializer
+        if self.action in ('create', 'update'):
+            return AgentCreateSerializer
+        return AgentDetailSerializer if self.action == 'retrieve' \
+            else AgentSimpleSerializer
 
-    def get(self, request, *args, **kwargs):
-        cls = RetrieveUpdateAPIView if 'pk' in kwargs else ListCreateAPIView
-        return cls.get(self, request, *args, **kwargs)
 
 # 使用ModelViewSet写CBV视图，完成接口的定制
 # 声明式缓存完成类方法缓存装饰器
@@ -116,31 +145,6 @@ class HouseTypeViewSet(ModelViewSet):
     pagination_class = None
 
 
-# 设置只读形式的楼盘接口
-# 楼盘的接口数据筛选
-@method_decorator(decorator=cache_page(timeout=86400), name='list')
-@method_decorator(decorator=cache_page(timeout=86400), name='retrieve')
-class EstateViewSet(ReadOnlyModelViewSet):
-    '''获取楼盘信息接口'''
-    queryset = Estate.objects.all()
-    filter_backends = (DjangoFilterBackend,OrderingFilter)
-    # filter_fields = ('name','hot','district') 指定字段直接使用filter_fields，
-    # 定制类的筛选接口
-    filterset_class = EstateFilterSet
-    ordering = '-hot'
-    ordering_fields = ('name','hot')
-    def get_queryset(self):
-        if self.action == 'list':
-            queryset = self.queryset.only('name')
-        else:
-            queryset = self.queryset.\
-                defer('district__parent','district__intro','district__ishot').\
-                select_related('district')
-        return queryset
-    def get_serializer_class(self):
-        return EstateRetrieveSerializer if self.action == 'retrieve' else EstateSimpleSerializer
-
-
 @method_decorator(decorator=cache_page(timeout=86400), name='list')
 class TagViews(ModelViewSet):
     '''房源标签'''
@@ -149,31 +153,71 @@ class TagViews(ModelViewSet):
     pagination_class = None
 
 
-class HouseInfoViews(ModelViewSet):
-    '''房源信息视图'''
-    queryset = HouseInfo.objects.all()
-    filter_backends = (DjangoFilterBackend,OrderingFilter)
-    filterset_class = HouseInfoFilterSet
-    ordering = 'price'
-    ordering_fields = ('floor','area')
+# 楼盘的接口数据筛选
+@method_decorator(decorator=cache_page(timeout=300), name='list')
+@method_decorator(decorator=cache_page(timeout=300), name='retrieve')
+class EstateViewSet(ModelViewSet):
+    """楼盘视图集"""
+    queryset = Estate.objects.all()
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    # 只能做精确查询，而且多个条件间只能是而且的关系
+    # filter_fields = ('name', 'hot', 'district')
+    filterset_class = EstateFilterSet
+    ordering = '-hot'
+    ordering_fields = ('district', 'hot', 'name')
+    # authentication_classes = (LoginRequiredAuthentication,)
+    # permission_classes = (RbacPermission,)
+
     def get_queryset(self):
         if self.action == 'list':
-            queryset = self.queryset.\
-                only('title', 'area', 'floor', 'totalfloor', 'price', 'mainphoto', 'street', 'type',
-                     'district_level3__distid', 'district_level3__name').select_related('district_level3', 'type').\
-                prefetch_related('tags')
+            queryset = self.queryset.only('name', 'hot')
         else:
-            queryset = self.queryset.defer('user', 'district_level2','district_level3__parent',
-                                           'district_level3__intro', 'district_level3__ishot',
-                                           'agent__realstar', 'agent__profstar', 'agent__certificated',
-                                           'estate__intro', 'estate__hot', 'estate__district').\
-                select_related('district_level3', 'type', 'estate', 'agent').\
-                prefetch_related('tags')
+            queryset = self.queryset \
+                .defer('district__parent', 'district__ishot', 'district__intro') \
+                .select_related('district')
         return queryset
 
     def get_serializer_class(self):
         if self.action in ('create', 'update'):
-            cls = HouseInfoCreateSerializer
-        else:
-            cls = HouseInfoRetrieveSerializer if self.action == 'retrieve' else HouseInfoListSerializer
-        return cls
+            return EstateCreateSerializer
+        return EstateDetailSerializer if self.action == 'retrieve' \
+            else EstateSimpleSerializer
+
+
+@method_decorator(decorator=cache_page(timeout=120), name='list')
+@method_decorator(decorator=cache_page(timeout=300), name='retrieve')
+class HouseInfoViewSet(ModelViewSet):
+    """房源视图集"""
+    queryset = HouseInfo.objects.all()
+    serializer_class = HouseInfoDetailSerializer
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filterset_class = HouseInfoFilterSet
+    ordering = ('-pubdate',)
+    ordering_fields = ('pubdate', 'price')
+
+    @action(methods=('GET',), detail=True)
+    def photos(self, request, pk):
+        queryset = HousePhoto.objects.filter(house=self.get_object())
+        return Response(HousePhotoSerializer(queryset, many=True).data)
+
+    def get_queryset(self):
+        if self.action == 'list':
+            return self.queryset \
+                .only('houseid', 'title', 'area', 'floor', 'totalfloor', 'price',
+                      'mainphoto', 'priceunit', 'street', 'type',
+                      'district_level3__distid', 'district_level3__name') \
+                .select_related('district_level3', 'type') \
+                .prefetch_related('tags')
+        return self.queryset \
+            .defer('user', 'district_level2',
+                   'district_level3__parent', 'district_level3__ishot', 'district_level3__intro',
+                   'estate__district', 'estate__hot', 'estate__intro',
+                   'agent__realstar', 'agent__profstar', 'agent__certificated') \
+            .select_related('district_level3', 'type', 'estate', 'agent') \
+            .prefetch_related('tags')
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update'):
+            return HouseInfoCreateSerializer
+        return HouseInfoDetailSerializer if self.action == 'retrieve' \
+            else HouseInfoSimpleSerializer

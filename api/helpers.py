@@ -11,29 +11,38 @@ class CustomPagination(PageNumberPagination):
 
 
 class AgentCursorPagination(CursorPagination):
-    '''自定义经理人分页'''
+    """经理人游标分页类"""
     page_size_query_param = 'size'
-    max_page_size = 20
+    max_page_size = 50
     ordering = '-agentid'
 
 
 class EstateFilterSet(filterset.FilterSet):
-    '''自定义楼盘筛选'''
-    name = filterset.CharFilter(lookup_expr='startswith')
+    """自定义楼盘筛选器"""
+    name = filterset.CharFilter(lookup_expr='contains')
     minhot = filterset.NumberFilter(field_name='hot', lookup_expr='gte')
-    mixhot = filterset.NumberFilter(field_name='hot', lookup_expr='lte')
+    maxhot = filterset.NumberFilter(field_name='hot', lookup_expr='lte')
     dist = filterset.NumberFilter(field_name='district')
+
     class Meta:
         model = Estate
-        fields = ('name', 'minhot', 'mixhot', 'dist')
+        fields = ('name', 'minhot', 'maxhot', 'dist')
+
 
 class HouseInfoFilterSet(filterset.FilterSet):
-    minarea = filterset.NumberFilter(field_name='area', lookup_expr='gte')
-    mixarea = filterset.NumberFilter(field_name='area', lookup_expr='lte')
-    floor = filterset.NumberFilter()
+    """自定义房源筛选器"""
+    title = filterset.CharFilter(lookup_expr='contains')
     minprice = filterset.NumberFilter(field_name='price', lookup_expr='gte')
-    mixprice = filterset.NumberFilter(field_name='price', lookup_expr='lte')
-    pubdate = filterset.CharFilter()
+    maxprice = filterset.NumberFilter(field_name='price', lookup_expr='lte')
+    minarea = filterset.NumberFilter(field_name='area', lookup_expr='gte')
+    maxarea = filterset.NumberFilter(field_name='area', lookup_expr='lte')
+    district = filterset.NumberFilter(method='filter_by_district')
+
+    @staticmethod
+    def filter_by_district(queryset, name, value):
+        return queryset.filter(Q(district_level2=value) |
+                               Q(district_level3=value))
+
     class Meta:
         model = HouseInfo
-        fields = ('minarea', 'mixarea', 'floor', 'minprice', 'mixprice', 'pubdate')
+        fields = ('title', 'minprice', 'maxprice', 'minarea', 'maxarea', 'type', 'district')
