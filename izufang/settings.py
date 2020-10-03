@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'debug_toolbar',
     'rest_framework',
+    'django_filters',
     'common',
     'api',
 ]
@@ -81,19 +82,22 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 5,
     # 配置默认的分页类
     'DEFAULT_PAGINATION_CLASS': 'api.helpers.CustomPagination',
-    # # 配置默认的过滤和排序类
+    # 配置默认的过滤和排序类
     # 'DEFAULT_FILTER_BACKENDS': (
     #     'django_filters.rest_framework.DjangoFilterBackend',
     #     'rest_framework.filters.OrderingFilter',
     # ),
-    # 'DEFAULT_THROTTLE_CLASSES': (
-    #     'rest_framework.throttling.AnonRateThrottle',
-    #     'rest_framework.throttling.UserRateThrottle',
-    # ),
-    # 'DEFAULT_THROTTLE_RATES': {
-    #     'anon': '30/min',
-    #     'user': '10000/day',
-    # }
+    # 接口限流，需要先配置缓存
+    'DEFAULT_THROTTLE_CLASSES': (
+        # 未登录
+        'rest_framework.throttling.AnonRateThrottle',
+        # 已经等
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/min',
+        'user': '10000/day',
+    }
 }
 
 # 调试工具栏
