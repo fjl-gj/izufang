@@ -15,7 +15,7 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from api.helpers import AgentCursorPagination, EstateFilterSet
+from api.helpers import AgentCursorPagination, EstateFilterSet, HouseInfoFilterSet
 from api.serializers import *
 from common.models import District, Agent
 
@@ -111,7 +111,6 @@ class AgentView(RetrieveUpdateAPIView,ListCreateAPIView):
 @method_decorator(decorator=cache_page(timeout=86400), name='retrieve')
 class HouseTypeViewSet(ModelViewSet):
     '''获取户型接口'''
-
     queryset = HouseType.objects.all()
     serializer_class = HouseTypeSerializer
     pagination_class = None
@@ -140,3 +139,41 @@ class EstateViewSet(ReadOnlyModelViewSet):
         return queryset
     def get_serializer_class(self):
         return EstateRetrieveSerializer if self.action == 'retrieve' else EstateSimpleSerializer
+
+
+@method_decorator(decorator=cache_page(timeout=86400), name='list')
+class TagViews(ModelViewSet):
+    '''房源标签'''
+    queryset = Tag.objects.all()
+    serializer_class = TagListSerializer
+    pagination_class = None
+
+
+class HouseInfoViews(ModelViewSet):
+    '''房源信息视图'''
+    queryset = HouseInfo.objects.all()
+    filter_backends = (DjangoFilterBackend,OrderingFilter)
+    filterset_class = HouseInfoFilterSet
+    ordering = 'price'
+    ordering_fields = ('floor','area')
+    def get_queryset(self):
+        if self.action == 'list':
+            queryset = self.queryset.\
+                only('title', 'area', 'floor', 'totalfloor', 'price', 'mainphoto', 'street', 'type',
+                     'district_level3__distid', 'district_level3__name').select_related('district_level3', 'type').\
+                prefetch_related('tags')
+        else:
+            queryset = self.queryset.defer('user', 'district_level2','district_level3__parent',
+                                           'district_level3__intro', 'district_level3__ishot',
+                                           'agent__realstar', 'agent__profstar', 'agent__certificated',
+                                           'estate__intro', 'estate__hot', 'estate__district').\
+                select_related('district_level3', 'type', 'estate', 'agent').\
+                prefetch_related('tags')
+        return queryset
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update'):
+            cls = HouseInfoCreateSerializer
+        else:
+            cls = HouseInfoRetrieveSerializer if self.action == 'retrieve' else HouseInfoListSerializer
+        return cls

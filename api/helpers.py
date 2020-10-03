@@ -1,7 +1,7 @@
 from django_filters import filterset
 from rest_framework.pagination import PageNumberPagination, CursorPagination
 
-from common.models import Estate
+from common.models import Estate, HouseInfo
 
 
 class CustomPagination(PageNumberPagination):
@@ -26,3 +26,14 @@ class EstateFilterSet(filterset.FilterSet):
     class Meta:
         model = Estate
         fields = ('name', 'minhot', 'mixhot', 'dist')
+
+class HouseInfoFilterSet(filterset.FilterSet):
+    minarea = filterset.NumberFilter(field_name='area', lookup_expr='gte')
+    mixarea = filterset.NumberFilter(field_name='area', lookup_expr='lte')
+    floor = filterset.NumberFilter()
+    minprice = filterset.NumberFilter(field_name='price', lookup_expr='gte')
+    mixprice = filterset.NumberFilter(field_name='price', lookup_expr='lte')
+    pubdate = filterset.CharFilter()
+    class Meta:
+        model = HouseInfo
+        fields = ('minarea', 'mixarea', 'floor', 'minprice', 'mixprice', 'pubdate')

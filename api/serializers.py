@@ -57,12 +57,7 @@ class EstateSimpleSerializer(serializers.ModelSerializer):
 
 class  EstateRetrieveSerializer(serializers.ModelSerializer):
     '''楼盘详情序列化器'''
-    district = serializers.SerializerMethodField()
-
-    @staticmethod
-    def get_district(estate):
-        queryset = estate.district
-        return DistrictSimpleSerializer(queryset).data
+    district = DistrictSimpleSerializer
 
     class Meta:
         model = Estate
@@ -74,3 +69,50 @@ class HouseTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = HouseType
         fields = '__all__'
+
+class TagListSerializer(serializers.ModelSerializer):
+    '''房源标签序列化器'''
+    class Meta:
+        model = Tag
+        fields = '__all__'
+
+class HouseInfoListSerializer(serializers.ModelSerializer):
+    '''房源信息列表序列化器'''
+    class Meta:
+        model = HouseInfo
+        fields = ('houseid', 'title', 'area', 'floor', 'totalfloor', 'price', 'mainphoto', 'street', 'district_level3', 'type')
+
+class HouseInfoRetrieveSerializer(serializers.ModelSerializer):
+    '''房源信息详情序列化器'''
+    photos = serializers.SerializerMethodField()
+    district = serializers.SerializerMethodField()
+    type =  HouseTypeSerializer()
+    estate = EstateSimpleSerializer()
+    agent = AgentRetrieveSerializer()
+    tags = TagListSerializer(many=True)
+
+    @staticmethod
+    def get_district(houseinfo):
+        return DistrictSimpleSerializer(houseinfo.district_level3).data
+    @staticmethod
+    def get_photos(houseinfo):
+        queryset = HousePhoto.objects.filter(house = houseinfo.houseid)
+        return HousePhotoSerializer(queryset).data
+
+    class Meta:
+        model = HouseInfo
+        exclude = ('user', 'district_level2', 'district_level3')
+
+
+class HouseInfoCreateSerializer(serializers.ModelSerializer):
+    '''新增房源信息序列化器'''
+    class Meta:
+        model = HouseInfo
+        exclude = ('type', 'user', 'district_level2', 'district_level3', 'estate', 'agent', 'tags')
+
+
+class HousePhotoSerializer(serializers.ModelSerializer):
+    '''房源图片简单序序列化器'''
+    class Meta:
+        model = HousePhoto
+        fields = ('photoid', 'ismain')

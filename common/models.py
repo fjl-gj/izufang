@@ -229,7 +229,7 @@ class Record(models.Model):
     user = models.ForeignKey(to=User, on_delete=models.DO_NOTHING, db_column='userid')
     # 浏览的房源
     house = models.ForeignKey(to=HouseInfo, on_delete=models.DO_NOTHING, db_column='houseid')
-    # 浏览日路日期
+    # 浏览日期
     recorddate = models.DateTimeField(auto_now=True)
 
     class Meta:
