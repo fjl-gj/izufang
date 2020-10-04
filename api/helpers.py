@@ -1,5 +1,6 @@
 from django_filters import filterset
 from rest_framework.pagination import PageNumberPagination, CursorPagination
+from rest_framework.response import Response
 
 from common.models import Estate, HouseInfo
 
@@ -46,3 +47,14 @@ class HouseInfoFilterSet(filterset.FilterSet):
     class Meta:
         model = HouseInfo
         fields = ('title', 'minprice', 'maxprice', 'minarea', 'maxarea', 'type', 'district')
+
+
+class UpResponse(Response):
+    '''响应重写'''
+    def __init__(self, code=1000, hint='操作成功' , data=None, status=None,
+                 template_name=None, headers=None,
+                 exception=False, content_type=None):
+        _data = {'code':code, 'hint':hint}
+        if data:
+            _data.update(data)
+        super().__init__(data=None, status=None,template_name=None, headers=None,exception=False, content_type=None)
