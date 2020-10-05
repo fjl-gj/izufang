@@ -24,6 +24,7 @@
                 <div class="box">
                     <h4>用户登录</h4>
                     <form id="loginForm" action="" method="post">
+                        {% csrf_token %}
                         <div class="infos">
                             <table class="field">
                                 <tr>
@@ -44,16 +45,19 @@
                                     <td class="field"><label for="captcha">验 证 码：</label></td>
                                     <td>
                                         <input id="captcha" type="text" class="text" name="captcha">
-                                        <img id="captchaImage" src="/captcha/" width="80" height="30">
+                                        <img id="captchaImage" src="/api/captcha/" width="80" height="30">
                                     </td>
                                 </tr>
                             </table>
                             <div class="buttons">
-                                <input type="submit" value="立即登录">
+                                <input type="submit" value="立即登录" @click="login()">
                                 <input id="regBtn" type="button" value="快速注册">
                             </div>
                         </div>
                     </form>
+                </div>
+                <div>
+                    <a href="/">回到首页</a>
                 </div>
             </div>
         </div>
@@ -65,11 +69,45 @@
             </dl>
         </div>
         <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.11/vue.min.js"></script>
         <script>
             $(() => {
                 $('#captchaImage').on('click', (evt) => {
-                    $(evt.target).attr('src', '/captcha/?' + Math.random())
+                    $(evt.target).attr('src', '/api/captcha/?' + Math.random())
                 })
+            })
+        </script>>
+        <script>
+            let app = new Vue({
+                el:'#loginForm',
+                data:{
+                    hint:'',
+                    username:'',
+                    password:'',
+                    captcha:''
+                },
+                methods: {
+                    login() {
+                        fetch('/api/login/', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                'username': this.username,
+                                'password': this.password,
+                                'captcha': this.captcha,
+                            }),
+                            headers: {'content-type': 'application/json','X-CSRFToken': csrftoken}
+                        }).then(resp => resp.json()).then(json => {
+                            if (json.code === 200001) {
+                                localStorage.token = json.token
+                                location.href = '/static/html/index.html/'
+                            } else {
+                                this.username = ''
+                                this.password = ''
+                                this.hint = alert(json.mesg)
+                            }
+                        })
+                    }
+                }
             })
         </script>
     </body>

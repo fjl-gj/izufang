@@ -26,8 +26,9 @@
 					<dd class="past">填写个人信息</dd>
 				</dl>
 				<div class="box">
-					<form id="registerForm" action="" method="post">
-						<div class="infos">
+                    <form id="registerForm" action="" method="post">
+                        {% csrf_token %}
+                        <div class="infos">
 							<table class="field">
 								<tr>
 									<td class="field">用 户 名：</td>

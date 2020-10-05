@@ -2,28 +2,40 @@ from datetime import datetime, timedelta
 
 import jwt
 import ujson
+# Create your views here.
+from django.core.cache import caches
+from django.db.models import Prefetch, Q
 from django.db.transaction import atomic
 from django.http import HttpRequest, HttpResponse
-# Create your views here.
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from django_redis import get_redis_connection
+from django.utils import timezone
+
 from rest_framework.decorators import api_view, action
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from api.helpers import EstateFilterSet, HouseInfoFilterSet, UpResponse
-from api.serializers import *
-from common.models import District, Agent
+from api.aliyuncn import send_sms_by_aliyun
+from api.consts import USER_LOGIN_SUCCESS, USER_LOGIN_FAILED, INVALID_LOGIN_INFO, NULL_LOGIN_INFO, CODE_TOO_FREQUENCY, \
+    MOBILE_CODE_SUCCESS
+from api.helpers import EstateFilterSet, HouseInfoFilterSet, DefaultResponse
+from api.serializers import DistrictSimpleSerializer, DistrictDetailSerializer, AgentCreateSerializer, \
+    AgentDetailSerializer, AgentSimpleSerializer, HouseTypeSerializer, TagListSerializer, EstateCreateSerializer, \
+    EstateDetailSerializer, EstateSimpleSerializer, HouseInfoDetailSerializer, HousePhotoSerializer, \
+    HouseInfoCreateSerializer, HouseInfoSimpleSerializer
+from common.captcha import Captcha
+from common.models import District, Agent, Estate, HouseType, Tag, HouseInfo, HousePhoto, User, LoginLog
+from common.utils import to_md5_hex, gen_captcha_text, get_ip_address, check_tel, gen_mobile_code
+from izufang.settings import SECRET_KEY
 
 
 # FBV
 # 声明式缓存
-from common.utils import to_md5_hex
-from izufang.settings import SECRET_KEY
 
 
 @cache_page(timeout=31536000, cache='default', key_prefix='api')
@@ -133,7 +145,7 @@ class AgentViewSet(ModelViewSet):
                 Prefetch('estates',
                          queryset=Estate.objects.all().only('name').order_by('-hot'))
             )
-        return self.queryset.order_by('-servstar')
+            return self.queryset.order_by('-servstar')
 
     def get_serializer_class(self):
         if self.action in ('create', 'update'):
@@ -173,6 +185,7 @@ class EstateViewSet(ModelViewSet):
     filterset_class = EstateFilterSet
     ordering = '-hot'
     ordering_fields = ('district', 'hot', 'name')
+
     # authentication_classes = (LoginRequiredAuthentication,)
     # permission_classes = (RbacPermission,)
 
@@ -229,39 +242,85 @@ class HouseInfoViewSet(ModelViewSet):
             return HouseInfoCreateSerializer
         return HouseInfoDetailSerializer if self.action == 'retrieve' \
             else HouseInfoSimpleSerializer
+
+
 @api_view(('POST',))
-def logo(request):
+def login(request):
     '''登录'''
     username = request.data.get('username')
     password = request.data.get('password')
-    if username and password:
-        password = to_md5_hex(password)
-        user = User.objects.filter(Q(username = username,password=password)|
-                                   Q(tel=username,password=password)|
-                                   Q(email=username,password=password)).first()
-        if user:
-            # 登陆成功后 先生成好token令牌
-            payload = {
-                # 有效时间位一天，信息为userid
-                'exp':datetime.utcnow()+timedelta(days=1),
-                'data':user.userid,
-            }
-            token = jwt.encode(payload,SECRET_KEY,algorithm='HS256').decode()
-            with atomic():
-                # 获取当前时间
-                current_time = tiemzone.now()
-                if not user.lastvisit or (current_time - user.lastvisit >= 1):
-                    user.point += 2
-                    user.lastvisit = current_time
-                    user.save()
-                login_log = LoginLog()
-                login_log.user = user
-                login_log.ipaddr = get_ip_address
-                login_log.logdate = current_time
-                login_log.save()
-            data = UpResponse(data = {'token':token})
+    captcha = request.data.get('captcha')
+    if username and password and captcha:
+        session_captcha = request.session['captcha']
+        if session_captcha.lower() == captcha.lower():
+            password = to_md5_hex(password)
+            user = User.objects.filter(Q(username=username, password=password) |
+                                       Q(tel=username, password=password) |
+                                       Q(email=username, password=password)).first()
+            if user:
+                # 登陆成功后 先生成好token令牌
+                payload = {
+                    # 有效时间位一天，信息为userid
+                    'exp': datetime.utcnow() + timedelta(days=1),
+                    'data': user.userid,
+                }
+                token = jwt.encode(payload, SECRET_KEY, algorithm='HS256').decode()
+                with atomic():
+                    # 获取当前时间
+                    current_time = timezone.now()
+                    if not user.lastvisit or (current_time - user.lastvisit >= 1):
+                        user.point += 2
+                        user.lastvisit = current_time
+                        user.save()
+                    login_log = LoginLog()
+                    login_log.user = user
+                    login_log.ipaddr = get_ip_address
+                    login_log.logdate = current_time
+                    login_log.save()
+                resp = DefaultResponse(*USER_LOGIN_SUCCESS, data={
+                    'token': token, 'username': user.username, 'realname': user.realname
+                })
+            else:
+                resp = DefaultResponse(*USER_LOGIN_FAILED)
         else:
-            data = UpResponse(code='2000', hint='登陆失败')
+            resp = DefaultResponse(*INVALID_LOGIN_INFO)
     else:
-        data = UpResponse(code='3000', hint='输入有误')
-    return data
+        resp = DefaultResponse(*NULL_LOGIN_INFO)
+    return resp
+    #             data = UpResponse(data={'token': token})
+    #         else:
+    #             data = UpResponse(code='2000', hint='账号或密码错误')
+    #     else:
+    #         data = UpResponse(code='3000', hint='输入验证码有误')
+    # else:
+    #     data = UpResponse(code='4000', hint='输入有空')
+    # return data
+
+
+def get_captcha(request):
+    '''行为验证码视图'''
+    # 生成验证码文本    并将验证码文本存入session
+    captcha_text = gen_captcha_text()
+    request.session['captcha'] = captcha_text
+    # 生成图片文本
+    image_data = Captcha.instance().generate(captcha_text)
+    # 返回并声明这是一个png格式的验证码图片
+    return HttpResponse(image_data, content_type='image/png')
+
+
+@api_view(('GET', ))
+def get_code_by_sms(request, tel):
+    """获取短信验证码"""
+    if check_tel(tel):
+        if caches['default'].get(f'{tel}:block'):
+            resp = DefaultResponse(*CODE_TOO_FREQUENCY)
+        else:
+            code = gen_mobile_code()
+            # 异步化的执行函数（把函数放到消息队列中去执行）----> 消息的生产者
+            send_sms_by_aliyun(tel, code)
+            caches['default'].set(f'{tel}:block', code, timeout=120)
+            caches['default'].set(f'{tel}:valid', code, timeout=600)
+            resp = DefaultResponse(*MOBILE_CODE_SUCCESS)
+    else:
+        resp = DefaultResponse(*INVALID_TEL_NUM)
+    return resp

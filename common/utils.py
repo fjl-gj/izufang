@@ -1,20 +1,25 @@
 """
 项目常用工具函数
 """
-import datetime
 import hashlib
 import io
-from concurrent.futures.thread import ThreadPoolExecutor
-
-import ujson
-import os
 import random
-import uuid
+import re
+from concurrent.futures.thread import ThreadPoolExecutor
 from functools import wraps, partial
 
+import qiniu
 import qrcode
 import requests
 from PIL.Image import Image
+
+# from izufang import api
+
+
+def check_tel(tel):
+    pattern = re.compile(r'^1[3-9]\d{9}$')
+    results = re.search(pattern, str(tel))
+    return int(results.group())
 
 
 def get_ip_address(request):
@@ -69,23 +74,6 @@ def gen_qrcode(data):
     buffer = io.BytesIO()
     image.save(buffer)
     return buffer.getvalue()
-
-
-def send_sms_by_luosimao(tel, message):
-    """发送短信（调用螺丝帽短信网关）"""
-    resp = requests.post(
-        url='http://sms-api.luosimao.com/v1/send.json',
-        auth=('api', 'key-d752503b8db92317a2642771cec1d9b0'),
-        data={
-            'mobile': tel,
-            'message': message
-        },
-        timeout=10,
-        verify=False)
-    return ujson.loads(resp.content)
-
-
-EXECUTOR = ThreadPoolExecutor(max_workers=64)
 
 
 def run_in_thread_pool(*, callbacks=(), callbacks_kwargs=()):

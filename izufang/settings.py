@@ -176,6 +176,10 @@ CACHES = {
     },
 }
 
+
+SESSION_ENGINE= "django.contrib.sessions.backends.cache"
+
+
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
@@ -291,3 +295,5 @@ MEDIA_URL = '/media/'
 
 # # 防止点击劫持攻击手段（不允许使用<iframe>标签进行加载）
 # X_FRAME_OPTIONS = 'DENY'
+
+#SESSION_ENGINE =

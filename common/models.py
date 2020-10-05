@@ -34,6 +34,7 @@ class User(models.Model):
     is_active = models.BooleanField(default=True)
     # 用户角色
     roles = models.ManyToManyField(to='Role', through='UserRole')
+
     # role = models.OneToOneField(to='Role', on_delete=models.DO_NOTHING)
 
     class Meta:
@@ -112,7 +113,7 @@ class AgentEstate(models.Model):
     class Meta:
         managed = False
         db_table = 'tb_agent_estate'
-        unique_together = (('agent', 'estate'), )
+        unique_together = (('agent', 'estate'),)
 
 
 class HouseType(models.Model):
@@ -218,7 +219,7 @@ class HouseTag(models.Model):
     class Meta:
         managed = False
         db_table = 'tb_house_tag'
-        unique_together = (('house', 'tag'), )
+        unique_together = (('house', 'tag'),)
 
 
 class Record(models.Model):
@@ -235,7 +236,7 @@ class Record(models.Model):
     class Meta:
         managed = False
         db_table = 'tb_record'
-        unique_together = (('user', 'house'), )
+        unique_together = (('user', 'house'),)
 
 
 class LoginLog(models.Model):
@@ -297,7 +298,7 @@ class UserRole(models.Model):
     class Meta:
         managed = False
         db_table = 'tb_user_role'
-        unique_together = (('user', 'role'), )
+        unique_together = (('user', 'role'),)
 
 
 class RolePrivilege(models.Model):
@@ -311,4 +312,4 @@ class RolePrivilege(models.Model):
     class Meta:
         managed = False
         db_table = 'tb_role_privilege'
-        unique_together = (('role', 'priv'), )
+        unique_together = (('role', 'priv'),)

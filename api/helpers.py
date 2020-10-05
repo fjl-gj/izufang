@@ -49,12 +49,12 @@ class HouseInfoFilterSet(filterset.FilterSet):
         fields = ('title', 'minprice', 'maxprice', 'minarea', 'maxarea', 'type', 'district')
 
 
-class UpResponse(Response):
+class DefaultResponse(Response):
     '''响应重写'''
-    def __init__(self, code=1000, hint='操作成功' , data=None, status=None,
+    def __init__(self, code=100000, hint='操作成功', data=None, status=None,
                  template_name=None, headers=None,
                  exception=False, content_type=None):
-        _data = {'code':code, 'hint':hint}
+        _data = {'code': code, 'hint': hint}
         if data:
             _data.update(data)
         super().__init__(data=None, status=None,template_name=None, headers=None,exception=False, content_type=None)
