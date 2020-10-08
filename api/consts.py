@@ -1,7 +1,9 @@
+from typing import Tuple
+
 MAX_PHOTO_SIZE = 2621440
 
 MOBILE_CODE_SUCCESS = (100001, '短信验证码发送成功')
-CODE_TOO_FREQUENCY = (100002, '请不要在120秒以内重复发送短信验证码')
+CODE_TOO_FREQUENCY: Tuple[int, str] = (100002, '请不要在120秒以内重复发送短信验证码')
 INVALID_TEL_NUM = (100003, '请提供有效的手机号')
 
 USER_LOGIN_SUCCESS = (200001, '用户登录成功')

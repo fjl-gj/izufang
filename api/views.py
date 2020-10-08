@@ -1,3 +1,5 @@
+import os
+import uuid
 from datetime import datetime, timedelta
 
 import jwt
@@ -20,17 +22,20 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from api.aliyuncn import send_sms_by_aliyun
+from api.aliyuncn import send_sms_by_aliyun, OssFLies, read_file
 from api.consts import USER_LOGIN_SUCCESS, USER_LOGIN_FAILED, INVALID_LOGIN_INFO, NULL_LOGIN_INFO, CODE_TOO_FREQUENCY, \
-    MOBILE_CODE_SUCCESS
+    MOBILE_CODE_SUCCESS, INVALID_TEL_NUM, FILE_UPLOAD_SUCCESS
+
 from api.helpers import EstateFilterSet, HouseInfoFilterSet, DefaultResponse
 from api.serializers import DistrictSimpleSerializer, DistrictDetailSerializer, AgentCreateSerializer, \
     AgentDetailSerializer, AgentSimpleSerializer, HouseTypeSerializer, TagListSerializer, EstateCreateSerializer, \
     EstateDetailSerializer, EstateSimpleSerializer, HouseInfoDetailSerializer, HousePhotoSerializer, \
     HouseInfoCreateSerializer, HouseInfoSimpleSerializer
+
 from common.captcha import Captcha
 from common.models import District, Agent, Estate, HouseType, Tag, HouseInfo, HousePhoto, User, LoginLog
 from common.utils import to_md5_hex, gen_captcha_text, get_ip_address, check_tel, gen_mobile_code
+
 from izufang.settings import SECRET_KEY
 
 
@@ -129,23 +134,22 @@ class AgentViewSet(ModelViewSet):
     delete:
         删除经理人
     """
+    # pagination_class = AgentCursorPagination
     queryset = Agent.objects.all()
 
     def get_queryset(self):
-        name = self.request.GET.get('name')
-        if name:
-            self.queryset = self.queryset.filter(name__contains=name)
-        servstar = self.request.GET.get('servstar')
-        if servstar:
-            self.queryset = self.queryset.filter(servstar__gte=servstar)
+        # name = self.request.GET.get('name')
+        # if name:
+        #     self.queryset = self.queryset.filter(name__contains=name)
+        # servstar = self.request.GET.get('servstar')
+        # if servstar:
+        #     self.queryset = self.queryset.filter(servstar__gte=servstar)
         if self.action == 'list':
             self.queryset = self.queryset.only('name', 'tel', 'servstar')
         else:
             self.queryset = self.queryset.prefetch_related(
-                Prefetch('estates',
-                         queryset=Estate.objects.all().only('name').order_by('-hot'))
-            )
-            return self.queryset.order_by('-servstar')
+                Prefetch('estates', queryset=Estate.objects.all().only('name').order_by('-hot')))
+            return self.queryset
 
     def get_serializer_class(self):
         if self.action in ('create', 'update'):
@@ -308,7 +312,7 @@ def get_captcha(request):
     return HttpResponse(image_data, content_type='image/png')
 
 
-@api_view(('GET', ))
+@api_view(('GET',))
 def get_code_by_sms(request, tel):
     """获取短信验证码"""
     if check_tel(tel):
@@ -317,10 +321,28 @@ def get_code_by_sms(request, tel):
         else:
             code = gen_mobile_code()
             # 异步化的执行函数（把函数放到消息队列中去执行）----> 消息的生产者
-            send_sms_by_aliyun(tel, code)
+            send_sms_by_aliyun.delay(tel, code)
             caches['default'].set(f'{tel}:block', code, timeout=120)
             caches['default'].set(f'{tel}:valid', code, timeout=600)
             resp = DefaultResponse(*MOBILE_CODE_SUCCESS)
     else:
         resp = DefaultResponse(*INVALID_TEL_NUM)
     return resp
+
+
+@api_view(('POST',))
+def upload_photo(request):
+    '''上传图片'''
+    file = request.FILES.get('mainphoto')
+    photo_oss = read_file(file.chunks())
+    filename = f'{uuid.uuid4().hex}{os.path.splitext(file.name)[1]}'
+    files = OssFLies()
+    files.upload(key=filename, data=photo_oss)
+    # photo = HousePhoto(
+    #     path=f'https://fjl-g-mysql.oss-cn-shenzhen.aliyuncs.com/izufang/izufang/static/izufang_image/{filename}'
+    # )
+    # photo.save()
+    return DefaultResponse(*FILE_UPLOAD_SUCCESS, data={
+        'photoid': 1,
+        'url': f'https://fjl-g-mysql.oss-cn-shenzhen.aliyuncs.com/izufang/izufang/static/izufang_image/{filename}',
+    })

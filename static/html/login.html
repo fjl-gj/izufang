@@ -12,6 +12,7 @@
 				<img src="/static/images/logo.png" width="160" height="40">
 			</div>
 			<div id="headbar">
+                <a href="/">回到首页</a>
 				<a href="login.html">用户登录</a>
 				<a href="register.html">快速注册</a>
 				<div class="pub">
@@ -24,7 +25,6 @@
                 <div class="box">
                     <h4>用户登录</h4>
                     <form id="loginForm" action="" method="post">
-                        {% csrf_token %}
                         <div class="infos">
                             <table class="field">
                                 <tr>
@@ -50,14 +50,11 @@
                                 </tr>
                             </table>
                             <div class="buttons">
-                                <input type="submit" value="立即登录" @click="login()">
+                                <input type="submit" value="立即登录">
                                 <input id="regBtn" type="button" value="快速注册">
                             </div>
                         </div>
                     </form>
-                </div>
-                <div>
-                    <a href="/">回到首页</a>
                 </div>
             </div>
         </div>
@@ -69,7 +66,7 @@
             </dl>
         </div>
         <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
-        <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.11/vue.min.js"></script>
+        <script src="https://cdn.bootcss.com/vue/2.6.10/vue.min.js"></script>
         <script>
             $(() => {
                 $('#captchaImage').on('click', (evt) => {

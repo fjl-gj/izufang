@@ -5,7 +5,7 @@ from django.urls import path
 from rest_framework.routers import SimpleRouter
 
 from api.views import get_province, get_district, HotCityView, get_captcha, AgentViewSet, HouseTypeViewSet, \
-    EstateViewSet, TagViews, HouseInfoViewSet, get_code_by_sms
+    EstateViewSet, TagViews, HouseInfoViewSet, get_code_by_sms, upload_photo
 
 urlpatterns = [
     path('districts/', get_province),
@@ -13,7 +13,8 @@ urlpatterns = [
     path('hotcities/', HotCityView.as_view()),
     path('login/', login),
     path('captcha/', get_captcha),
-    path('tel/<int:tel>/', get_code_by_sms)
+    path('tel/<int:tel>/', get_code_by_sms),
+    path('photos/', upload_photo),
 ]
 
 router = SimpleRouter()

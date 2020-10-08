@@ -12,6 +12,7 @@
 				<img src="/static/images/logo.png" width="160" height="40">
 			</div>
 			<div id="headbar">
+				<a href="/">回到首页</a>
 				<a href="login.html">用户登录</a>
 				<a href="register.html">快速注册</a>
 				<div class="pub">
@@ -26,14 +27,13 @@
 					<dd class="past">填写个人信息</dd>
 				</dl>
 				<div class="box">
-                    <form id="registerForm" action="" method="post">
-                        {% csrf_token %}
-                        <div class="infos">
+					<form id="registerForm" action="" method="post">
+						<div class="infos">
 							<table class="field">
 								<tr>
 									<td class="field">用 户 名：</td>
 									<td>
-										<input id="username" type="text" class="text" name="username"> 
+										<input id="username" type="text" class="text" name="username">
 									</td>
 								</tr>
 								<tr>
@@ -84,7 +84,7 @@
 				<dd>关于千锋 · 联系我们 · 意见反馈 · 帮助中心</dd>
 			</dl>
 		</div>
-		<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://cdn.bootcss.com/vue/2.6.10/vue.min.js"></script>
 		<script>
 
 		</script>
