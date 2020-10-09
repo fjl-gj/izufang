@@ -1,8 +1,14 @@
 import ujson
+from django.core.cache import caches
+from django.db.models import Q
+from django.db.transaction import atomic
 from django_redis import get_redis_connection
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
-from common.models import *
+from common.models import District, Agent, Estate, HouseType, Tag, HouseInfo, HousePhoto, User, Role, UserRole
+from common.utils import to_md5_hex
+from common.validators import USERNAME_PATTERN, TEL_PATTERN, EMAIL_PATTERN
 
 
 class DistrictSimpleSerializer(serializers.ModelSerializer):
@@ -161,3 +167,62 @@ class HousePhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = HousePhoto
         fields = ('photoid', 'path')
+
+
+class UserSimpleSerializer(serializers.ModelSerializer):
+    """用户简单序列化器"""
+
+    class Meta:
+        model = User
+        exclude = ('password', 'roles')
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """更新用户序列化器"""
+
+    class Meta:
+        model = User
+        fields = ('realname', 'tel', 'email', 'sex')
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    """创建用户序列化器"""
+    username = serializers.RegexField(regex=USERNAME_PATTERN)
+    password = serializers.CharField(min_length=6)
+    realname = serializers.RegexField(regex=r'[\u4e00-\u9fa5]{2,20}')
+    tel = serializers.RegexField(regex=TEL_PATTERN)
+    email = serializers.RegexField(regex=EMAIL_PATTERN)
+    code = serializers.CharField(write_only=True, min_length=6, max_length=6)
+
+    def validate(self, attrs):
+        code_from_user = attrs['code']
+        code_from_redis = caches['default'].get(f'{attrs["tel"]}:valid')
+        if code_from_redis != code_from_user:
+            raise ValidationError('请输入有效的手机验证码', 'invalid')
+        user = User.objects.filter(Q(username=attrs['username']) |
+                                   Q(tel=attrs['tel']) |
+                                   Q(email=attrs['email']))
+        if user:
+            raise ValidationError('用户名、手机或邮箱已被注册', 'invalid')
+        return attrs
+
+    def create(self, validated_data):
+        del validated_data['code']
+        caches['default'].delete(f'{validated_data["tel"]}:valid')
+        validated_data['password'] = to_md5_hex(validated_data['password'])
+        with atomic():
+            user = User.objects.create(**validated_data)
+            role = Role.objects.get(roleid=1)
+            UserRole.objects.create(user=user, role=role)
+        return user
+
+    class Meta:
+        model = User
+        exclude = ('userid', 'regdate', 'point', 'lastvisit', 'roles')
+
+
+class RoleSimpleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Role
+        fields = ('roleid', )

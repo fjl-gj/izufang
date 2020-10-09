@@ -1,8 +1,18 @@
+from functools import lru_cache
+
+import jwt
+from django.contrib.auth.models import AnonymousUser
+from django.db.models import Q, Prefetch
 from django_filters import filterset
+from jwt import InvalidTokenError
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.pagination import PageNumberPagination, CursorPagination
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
-from common.models import Estate, HouseInfo
+from common.models import Estate, HouseInfo, User, Role
+from izufang.settings import SECRET_KEY
 
 
 class CustomPagination(PageNumberPagination):
@@ -50,11 +60,56 @@ class HouseInfoFilterSet(filterset.FilterSet):
 
 
 class DefaultResponse(Response):
-    '''响应重写'''
-    def __init__(self, code=100000, hint='操作成功', data=None, status=None,
-                 template_name=None, headers=None,
-                 exception=False, content_type=None):
-        _data = {'code': code, 'hint': hint}
+    """定义返回JSON数据的响应类"""
+
+    def __init__(self, code=100000, message='操作成功',
+                 data=None, status=None, template_name=None,
+                 headers=None, exception=False, content_type=None):
+        _data = {'code': code, 'message': message}
         if data:
             _data.update(data)
-        super().__init__(data=None, status=None,template_name=None, headers=None,exception=False, content_type=None)
+        super().__init__(_data, status, template_name,
+                         headers, exception, content_type)
+
+
+class LoginRequiredAuthentication(BaseAuthentication):
+    """登录认证"""
+
+    # 如果用户身份验证成功需要返回一个二元组(user, token)
+    def authenticate(self, request):
+        token = request.META.get('HTTP_TOKEN')
+        if token:
+            try:
+                payload = jwt.decode(token, SECRET_KEY)
+                user = User()
+                user.userid = payload['data']['userid']
+                user.is_authenticated = True
+                return user, token
+            except InvalidTokenError:
+                raise AuthenticationFailed('无效的令牌或令牌已过期')
+        raise AuthenticationFailed('请提供用户身份令牌')
+
+
+class RbacPermission(BasePermission):
+    """RBAC授权"""
+
+    # 返回True表示有操作权限，返回False表示没有操作权限
+    def has_permission(self, request, view):
+        if isinstance(request.user, AnonymousUser):
+            return False
+        privs = get_privs_by_userid(request.user.userid)
+        for priv in privs:
+            if request.path.startswith(priv.url) and \
+                    request.method == priv.method:
+                return True
+        return False
+
+
+@lru_cache(maxsize=256)
+def get_privs_by_userid(userid):
+    user = User.objects.filter(userid=userid).prefetch_related(
+        Prefetch(
+            'roles', queryset=Role.objects.all().prefetch_related('privs')
+        )
+    ).first()
+    return [priv for role in user.roles.all() for priv in role.privs.all()]

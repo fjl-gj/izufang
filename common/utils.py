@@ -8,12 +8,11 @@ import re
 from concurrent.futures.thread import ThreadPoolExecutor
 from functools import wraps, partial
 
-import qiniu
 import qrcode
-import requests
 from PIL.Image import Image
 
-# from izufang import api
+
+EXECUTOR = ThreadPoolExecutor(max_workers=64)
 
 
 def check_tel(tel):
@@ -96,3 +95,6 @@ def run_in_thread_pool(*, callbacks=(), callbacks_kwargs=()):
         return wrapper
 
     return decorator
+
+
+

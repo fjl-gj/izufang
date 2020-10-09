@@ -291,14 +291,6 @@ def login(request):
     else:
         resp = DefaultResponse(*NULL_LOGIN_INFO)
     return resp
-    #             data = UpResponse(data={'token': token})
-    #         else:
-    #             data = UpResponse(code='2000', hint='账号或密码错误')
-    #     else:
-    #         data = UpResponse(code='3000', hint='输入验证码有误')
-    # else:
-    #     data = UpResponse(code='4000', hint='输入有空')
-    # return data
 
 
 def get_captcha(request):
@@ -323,7 +315,7 @@ def get_code_by_sms(request, tel):
             # 异步化的执行函数（把函数放到消息队列中去执行）----> 消息的生产者
             send_sms_by_aliyun.delay(tel, code)
             caches['default'].set(f'{tel}:block', code, timeout=120)
-            caches['default'].set(f'{tel}:valid', code, timeout=600)
+            # caches['default'].set(f'{tel}:valid', code, timeout=600)
             resp = DefaultResponse(*MOBILE_CODE_SUCCESS)
     else:
         resp = DefaultResponse(*INVALID_TEL_NUM)
@@ -346,3 +338,15 @@ def upload_photo(request):
         'photoid': 1,
         'url': f'https://fjl-g-mysql.oss-cn-shenzhen.aliyuncs.com/izufang/izufang/static/izufang_image/{filename}',
     })
+
+
+class UserViewSet(ModelViewSet):
+    """用户模型视图集"""
+    queryset = User.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserCreateSerializer
+        elif self.action == 'update':
+            return UserUpdateSerializer
+        return UserSimpleSerializer

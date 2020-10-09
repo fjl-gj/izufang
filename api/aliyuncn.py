@@ -56,6 +56,7 @@ def read_file(cata):
         file_img += bytes(i)
     return file_img
 
+
 # print(read_file('logo1'))
 
 
@@ -113,8 +114,7 @@ def send_sms_by_aliyun(tel, message):
     request.add_query_param('TemplateCode', "SMS_204126343")
     request.add_query_param('TemplateParam', "{'code':" + f'{message}' + "}")
     response = client.do_action_with_exception(request)
-    print(str(response, encoding='utf-8'))
-
+    return str(response, encoding='utf-8')
 
 # from common.models import HousePhoto
 #
