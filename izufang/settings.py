@@ -153,10 +153,32 @@ DATABASES = {
         'CHARSET': 'utf8',
         'TIME_ZONE': 'Asia/Shanghai',
     },
+    'slave1': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'izufang',
+        'HOST': '8.129.162.35',
+        'PORT': 3308,
+        'USER': 'fjl1',
+        'PASSWORD': 'fjl1024.618',
+        'CHARSET': 'utf8',
+        'TIME_ZONE': 'Asia/Shanghai',
+    },
+    # other作为关联的多实例数据库，可涉及到其他app，进行反向工程生成数据库对象模型
+    # 但是需要注意的是当前项目默认的数据库，在反向工程后表
+    'other': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'izufang',
+        'HOST': '8.129.162.35',
+        'PORT': 3309,
+        'USER': 'fjl',
+        'PASSWORD': 'fjl1024.618',
+        'CHARSET': 'utf8',
+        'TIME_ZONE': 'Asia/Shanghai',
+    }
 }
 
 # # 数据库路由配置
-# DATABASE_ROUTERS = []
+DATABASE_ROUTERS = ['common.db_routers.MasterSlaveRouter', ]
 
 # 缓存配置
 CACHES = {
