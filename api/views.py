@@ -30,7 +30,8 @@ from api.helpers import EstateFilterSet, HouseInfoFilterSet, DefaultResponse
 from api.serializers import DistrictSimpleSerializer, DistrictDetailSerializer, AgentCreateSerializer, \
     AgentDetailSerializer, AgentSimpleSerializer, HouseTypeSerializer, TagListSerializer, EstateCreateSerializer, \
     EstateDetailSerializer, EstateSimpleSerializer, HouseInfoDetailSerializer, HousePhotoSerializer, \
-    HouseInfoCreateSerializer, HouseInfoSimpleSerializer
+    HouseInfoCreateSerializer, HouseInfoSimpleSerializer, UserCreateSerializer, UserUpdateSerializer, \
+    UserSimpleSerializer
 
 from common.captcha import Captcha
 from common.models import District, Agent, Estate, HouseType, Tag, HouseInfo, HousePhoto, User, LoginLog

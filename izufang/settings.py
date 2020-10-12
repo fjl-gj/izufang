@@ -25,7 +25,7 @@ SECRET_KEY = 'br*p^)=t4)k6ow!22-zc6$f+wz%oe4aq6qao#jjgyqpdj&1u28'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -146,7 +146,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'izufang',
-        'HOST': '8.129.162.35',
+        'HOST': '172.18.3.221',
         'PORT': 3306,
         'USER': 'fjl',
         'PASSWORD': 'fjl1024.618',
@@ -156,7 +156,7 @@ DATABASES = {
     'slave1': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'izufang',
-        'HOST': '8.129.162.35',
+        'HOST': '172.18.3.221',
         'PORT': 3308,
         'USER': 'fjl1',
         'PASSWORD': 'fjl1024.618',
@@ -168,7 +168,7 @@ DATABASES = {
     'other': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'izufang',
-        'HOST': '8.129.162.35',
+        'HOST': '172.18.3.221',
         'PORT': 3309,
         'USER': 'fjl',
         'PASSWORD': 'fjl1024.618',
@@ -185,7 +185,7 @@ CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': [
-            'redis://8.129.162.35:54321/0',
+            'redis://172.18.3.221:54321/0',
         ],
         'KEY_PREFIX': 'izufang',
         'OPTIONS': {

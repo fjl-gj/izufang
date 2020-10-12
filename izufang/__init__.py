@@ -1,6 +1,19 @@
 import os
 
 import celery
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from django.urls import path
+
+sentry_sdk.init(
+    dsn="https://08cfc2cbd0e14e30bad5eb09388b35a4@o459981.ingest.sentry.io/5459682",
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii=True
+)
 
 # 注册环境变量量
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'izufang.settings')
@@ -19,3 +32,13 @@ app.config_from_object('django.conf:settings')
 
 # 让Celery自动从参数指定的应用中发现异步任务/定时任务
 app.autodiscover_tasks(['common', ])
+
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
+urlpatterns = [
+    path('sentry-debug/', trigger_error),
+    # ...
+]
