@@ -39,9 +39,9 @@ class OssFLies:
     def upload(self, key, data, *args):
         '''上传图片'''
         # # 创建存储空间
-        # auth = oss2.Auth('LTAI4G4dWXk2TQMFiN2UsSo9', 'wlru6tunbXQqvuCd8zZoGoSVjzrM3j')
+        # auth = oss2.Auth('AccessKey ID', 'AccessKey Secret')
         # # Endpoint以ESC服务器，。
-        # bucket = oss2.Bucket(auth, 'http://oss-cn-shenzhen.aliyuncs.com', 'fjl-g-mysql')
+        # bucket = oss2.Bucket(auth, 'http://oss-cn-shenzhen.aliyuncs.com', 'bucket')
         # 上传文件
         # key上传文件到OSS时需要指定包含文件后缀在内的完整路径，例如abc/efg/123.jpg。
         # filename由本地文件路径加文件名包括后缀组成，例如/users/local/myfile.txt。
